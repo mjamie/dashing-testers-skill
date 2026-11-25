@@ -17,7 +17,7 @@ The upload helper uses Node.js 20 or newer. Start a new assistant session after 
 
 Create the project and open a test round in DashingTesters. Under **Team → My upload tokens**, create a token for your developer account. Set DASHINGTESTERS_URL to the dashboard base URL and DASHINGTESTERS_TOKEN to your upload token in the environment that starts your assistant. Keep the token in your local environment or secret manager.
 
-Open your target app checkout in your assistant. In Codex, ask it to use the dashing-testers skill for your project slug. In Claude Code, run /dashing-testers followed by the project slug. Add a feature name to narrow the scope, or leave it out to review the app across its implemented flows.
+Open your target app checkout in your assistant. Invoke the skill explicitly with `$dashing-testers` in Codex or `/dashing-testers` in Claude Code, followed by the project slug. Add a feature name to narrow the scope, or leave it out to review the app across its implemented flows.
 
 Uploads become visible immediately. Repeat runs add new story keys and preserve existing edits and tester results.
 

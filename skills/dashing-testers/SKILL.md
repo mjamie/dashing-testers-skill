@@ -1,11 +1,12 @@
 ---
 name: dashing-testers
-description: Inspect the current app checkout and publish plain-language manual test stories to an explicitly named DashingTesters project and its open test round. Use when a developer asks to prepare or upload a testing checklist.
+description: Explicitly invoked workflow for inspecting the current app checkout and publishing plain-language test stories to a DashingTesters project's open round.
+disable-model-invocation: true
 ---
 
 # Publish manual test stories
 
-Run from the target app checkout. Take the DashingTesters project slug from the request and an optional feature or release focus. Ask for the slug if it is missing. An explicit request to run this publishing workflow authorizes uploading the resulting stories to that named project. For a preview-only request, produce the draft locally.
+Start this workflow only when the developer explicitly invokes or selects this skill for the current task. Run from the target app checkout. Take the DashingTesters project slug from the request and an optional feature or release focus. Ask for the slug if it is missing. An explicit request to run this publishing workflow authorizes uploading the resulting stories to that named project. For a preview-only request, produce the draft locally.
 
 1. Run `node <this-skill>/scripts/upload.mjs context <project-slug>` using the path to this installed skill. Read the project, open round, build label, access notes, and existing story keys and titles. Check that the checkout and any requested focus match this project. If the target is ambiguous, resolve it before proceeding. Keep the round ID.
 2. Map what a person can actually do in this build. Read the app entry points, screens or CLI flows, setup docs, tests, and feature flags that govern the requested scope. Check the docs against reachable behavior. If an existing local or approved test build is available, use safe, relevant smoke checks with test data. Mark behavior as observed only after exercising it. Record the source revision when available and disclose material differences between the checkout and the tested build.
