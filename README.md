@@ -1,26 +1,32 @@
 # DashingTesters skill
 
-Generate plain-language manual test stories from an app checkout and publish them to an open round in your DashingTesters dashboard. Each story includes a goal, ordered steps, and an expected result.
+Use your app's existing Codex or Claude Code chat to write a manual test checklist. The skill publishes the project, build instructions, and plain-language stories to your DashingTesters dashboard. Each story has a goal, ordered steps, and a visible expected result.
 
 ## Install
 
-Clone this repository and copy the entire skills/dashing-testers folder into one of these user skill directories.
+Clone this repository and copy the entire `skills/dashing-testers` folder into your user skill directory.
 
 | Assistant | User skill directory |
 | --- | --- |
-| Codex | ~/.agents/skills/ |
-| Claude Code | ~/.claude/skills/ |
+| Codex | `~/.agents/skills/` |
+| Claude Code | `~/.claude/skills/` |
 
-The upload helper uses Node.js 20 or newer. Start a new assistant session after installation.
+The helper uses Node.js 20 or newer. Start a new assistant session after installing or refreshing the skill.
 
-## Connect a dashboard
+## Connect once
 
-Create the project and open a test round in DashingTesters. Under **Team → My upload tokens**, create a token for your developer account. Set DASHINGTESTERS_URL to the dashboard base URL and DASHINGTESTERS_TOKEN to your upload token in the environment that starts your assistant. Keep the token in your local environment or secret manager.
+Under **Team → My upload tokens** in DashingTesters, create a token for your developer account. Set `DASHINGTESTERS_URL` and `DASHINGTESTERS_TOKEN` in the environment that launches your assistant. Set `DASHINGTESTERS_TESTER_EMAIL` if you want a default tester when more than one has joined. Keep the token private.
 
-Open your target app checkout in your assistant. Invoke the skill explicitly with `$dashing-testers` in Codex or `/dashing-testers` in Claude Code, followed by the project slug. Add a feature name to narrow the scope, or leave it out to review the app across its implemented flows.
+The helper also reads a private connection file when the environment variables are absent. Use `%LOCALAPPDATA%/DashingTesters/connection.json` on Windows or `${XDG_CONFIG_HOME:-~/.config}/dashingtesters/connection.json` on macOS and Linux. The fields are `url`, `token`, and optional `tester_email`.
 
-Uploads become visible immediately. Repeat runs add new story keys and preserve existing edits and tester results.
+## Publish or export
+
+In the chat for the app you want tested, invoke `$dashing-testers` in Codex or `/dashing-testers` in Claude Code. Include an existing dashboard slug if it differs from the app name. Add a feature to narrow the scope.
+
+The skill writes the checklist, creates the project and first round as needed, and publishes immediately. If exactly one tester has joined, the dashboard assigns them to a new project automatically. Repeat uploads preserve existing stories and tester progress.
+
+For a file instead, add `export JSON` to the invocation. In the updated dashboard, open **Projects → Import JSON** or select **Import JSON** in a project and upload the file.
 
 ## Update the skill
 
-Edit skills/dashing-testers/SKILL.md to change the workflow. Keep the JSON contract in skills/dashing-testers/references/story-batch.md and the dashboard API in sync when changing the payload. Pull updates and refresh your installed copy.
+Keep `skills/dashing-testers/references/story-batch.md` and the dashboard API in sync when changing the batch format. Pull updates and refresh your installed copy.

@@ -1,7 +1,43 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
-const [action, project, roundId, batchPath] = process.argv.slice(2);
+const [action, projectOrFile, roundId, legacyBatchPath] = process.argv.slice(2);
+const usage = 'Use: upload.mjs context <project-slug> | defaults | publish-batch <batch.json> | publish <project-slug> <round-id> <batch.json> | new-id';
+
+async function connection() {
+    const { DASHINGTESTERS_URL, DASHINGTESTERS_TOKEN, DASHINGTESTERS_TESTER_EMAIL } = process.env;
+    if (DASHINGTESTERS_URL !== undefined || DASHINGTESTERS_TOKEN !== undefined) {
+        return { url: DASHINGTESTERS_URL, token: DASHINGTESTERS_TOKEN, tester_email: DASHINGTESTERS_TESTER_EMAIL };
+    }
+
+    const profile = process.platform === 'win32'
+        ? join(process.env.LOCALAPPDATA || homedir(), 'DashingTesters', 'connection.json')
+        : join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'dashingtesters', 'connection.json');
+    try {
+        return JSON.parse((await readFile(profile, 'utf8')).replace(/^\uFEFF/, ''));
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            return {};
+        }
+        throw new Error('The DashingTesters connection profile could not be read.');
+    }
+}
+
+async function readBatch(file, version) {
+    let batch;
+    try {
+        batch = JSON.parse((await readFile(file, 'utf8')).replace(/^\uFEFF/, ''));
+    } catch {
+        throw new Error('The checklist JSON file could not be read.');
+    }
+    if (batch?.schema_version !== version || typeof batch.import_id !== 'string' || !Array.isArray(batch.stories)) {
+        throw new Error('The batch requires schema_version ' + version + ', an import_id, and a stories array.');
+    }
+
+    return JSON.stringify(batch);
+}
 
 async function main() {
     if (action === 'new-id') {
@@ -9,14 +45,18 @@ async function main() {
         return;
     }
 
-    if (!['context', 'publish'].includes(action) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(project ?? '')) {
-        throw new Error('Use: upload.mjs context <project-slug> | publish <project-slug> <round-id> <batch.json> | new-id');
+    if (!['context', 'defaults', 'publish', 'publish-batch'].includes(action)) {
+        throw new Error(usage);
     }
 
-    const base = process.env.DASHINGTESTERS_URL;
-    const token = process.env.DASHINGTESTERS_TOKEN;
+    const { url: base, token, tester_email: testerEmail } = await connection();
+    if (action === 'defaults') {
+        console.log(JSON.stringify({ tester_email: testerEmail ?? null }));
+        return;
+    }
+
     if (!base || !/^dt_[a-f0-9]{64}$/.test(token ?? '')) {
-        throw new Error('Set DASHINGTESTERS_URL and DASHINGTESTERS_TOKEN in this machine’s environment.');
+        throw new Error('Connect this machine with DASHINGTESTERS_URL and DASHINGTESTERS_TOKEN, or export the checklist for file import.');
     }
 
     const url = new URL(base);
@@ -26,22 +66,30 @@ async function main() {
         throw new Error('Use the dashboard’s HTTPS base URL. HTTP is supported only for local loopback testing.');
     }
 
-    let suffix = 'testing-context';
+    let endpoint = '/api/v1/story-imports';
     let body;
-    if (action === 'publish') {
-        if (!/^[1-9]\d*$/.test(roundId ?? '') || !batchPath) {
-            throw new Error('Publishing requires the open round ID and a batch JSON file.');
+    if (action === 'publish-batch') {
+        if (!projectOrFile) {
+            throw new Error(usage);
         }
-
-        suffix = 'rounds/' + roundId + '/story-imports';
-        const batch = JSON.parse((await readFile(batchPath, 'utf8')).replace(/^\uFEFF/, ''));
-        if (batch.schema_version !== 1 || typeof batch.import_id !== 'string' || !Array.isArray(batch.stories)) {
-            throw new Error('The batch requires schema_version 1, an import_id, and a stories array.');
+        body = await readBatch(projectOrFile, 2);
+    } else {
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectOrFile ?? '')) {
+            throw new Error(usage);
         }
-        body = JSON.stringify(batch);
+        endpoint = '/api/v1/projects/' + projectOrFile;
+        if (action === 'publish') {
+            if (!/^[1-9]\d*$/.test(roundId ?? '') || !legacyBatchPath) {
+                throw new Error('Publishing a version 1 batch requires the open round ID and the JSON file.');
+            }
+            endpoint += '/rounds/' + roundId + '/story-imports';
+            body = await readBatch(legacyBatchPath, 1);
+        } else {
+            endpoint += '/testing-context';
+        }
     }
 
-    url.pathname = url.pathname.replace(/\/+$/, '') + '/api/v1/projects/' + project + '/' + suffix;
+    url.pathname = url.pathname.replace(/\/+$/, '') + endpoint;
     const response = await fetch(url, {
         method: body ? 'POST' : 'GET',
         headers: {
@@ -55,6 +103,10 @@ async function main() {
     });
 
     const result = await response.json().catch(() => null);
+    if (action === 'context' && result && [404, 409].includes(response.status)) {
+        console.log(JSON.stringify({ status: response.status === 404 ? 'project_not_found' : 'no_open_round' }));
+        return;
+    }
     if (!response.ok || !result) {
         const detail = result?.errors ? Object.values(result.errors).flat().join(' ') : result?.message;
         throw new Error('DashingTesters returned HTTP ' + response.status + (detail ? '. ' + detail : '.'));
