@@ -1,6 +1,6 @@
 # DashingTesters skill
 
-Use your app's existing Codex or Claude Code chat to write a manual test checklist. The skill publishes the project, build instructions, and plain-language stories to your DashingTesters dashboard. Each story has a goal, ordered steps, and a visible expected result.
+Invoke the skill in your app's Codex or Claude Code chat to write a manual test checklist and automatically publish the project, build instructions, and plain-language stories to your DashingTesters dashboard. Each story has a goal, ordered steps, and a visible expected result.
 
 ## Install
 
@@ -19,13 +19,15 @@ Under **Team → My upload tokens** in DashingTesters, create a token for your d
 
 The helper also reads a private connection file when the environment variables are absent. Use `%LOCALAPPDATA%/DashingTesters/connection.json` on Windows or `${XDG_CONFIG_HOME:-~/.config}/dashingtesters/connection.json` on macOS and Linux. The fields are `url`, `token`, and optional `tester_email`.
 
-## Publish or export
+## Publish a checklist
 
 In the chat for the app you want tested, invoke `$dashing-testers` in Codex or `/dashing-testers` in Claude Code. Include an existing dashboard slug if it differs from the app name. Add a feature to narrow the scope.
 
-The skill writes the checklist, creates the project and first round as needed, and publishes immediately. If exactly one tester has joined, the dashboard assigns them to a new project automatically. Repeat uploads preserve existing stories and tester progress.
+The skill writes and publishes the checklist automatically, creating the project and first round as needed. If exactly one tester has joined, the dashboard assigns them to a new project automatically. Repeat uploads preserve existing stories and tester progress.
 
-For a file instead, add `export JSON` to the invocation. In the updated dashboard, open **Projects → Import JSON** or select **Import JSON** in a project and upload the file.
+### JSON import fallback
+
+If direct publishing is unavailable, the skill gives you a JSON file. Upload it under **Projects → Import JSON** or choose **Import JSON** inside an existing project. To request the fallback file explicitly, add `export JSON` to the invocation.
 
 ## Update the skill
 
